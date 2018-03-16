@@ -1,0 +1,90 @@
+---
+title: "Practical Machine Learning Assignment"
+author: "Sukumar Rayan"
+date: "March 16, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goal
+
+In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. Users were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+The goal of this project is to predict the way users did the exercise. This is the "class" variable in the training set. We will use cross validation and find expected out of sample error to determine the model. Using the model we will predict 20 different test cases.
+
+## Dataset
+
+Six young health participants performed one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: 
+-	exactly according to the specification (Class A)
+-	throwing the elbows to the front (Class B)
+-	lifting the dumbbell only halfway (Class C)
+-	lowering the dumbbell only halfway (Class D) 
+-	throwing the hips to the front (Class E).
+
+## Approach
+-	For getting same result we need set the seed to same value for all code
+-	We will use caret and random forest packages for analysis
+-	We will base the prediction evaluations on maximizing the accuracy and minimizing the out-of-sample error. All available variables after cleaning will be used for prediction.
+-	We will test using decision tree and random forest algorithms. 
+-	Then pick model with the highest accuracy to apply
+
+## Cross-validation
+### Dataslicing
+The data is already split into Training and testing, now we will split the Training data into subTraining data (75% of the original Training data set) and subTesting data (25%). We model using subTraining data set and test it on the subTesting data. Then the most accurate model will be tested on the original Testing dataset.
+
+```{r Ananlysis}
+
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+set.seed(1234)
+trainingset <- read.csv("~/PracticalMLAssignment/Data/pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testingset <- read.csv("~/PracticalMLAssignment/Data/pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+dim(trainingset)
+dim(testingset)
+colnames(trainingset)
+trainingset<-trainingset[,colSums(is.na(trainingset)) == 0]
+testingset <-testingset[,colSums(is.na(testingset)) == 0]
+trainingset   <-trainingset[,-c(1:7)]
+testingset <-testingset[,-c(1:7)]
+dim(trainingset)
+dim(testingset)
+head(trainingset)
+head(testingset)
+subsamples <- createDataPartition(y=trainingset$classe, p=0.75, list=FALSE)
+subTraining <- trainingset[subsamples, ]
+subTesting <- trainingset[-subsamples, ]
+model1 <- rpart(classe ~ ., data=subTraining, method="class")
+prediction1 <- predict(model1, subTesting, type = "class")
+confusionMatrix(prediction1, subTesting$classe)
+model2 <- randomForest(classe ~. , data=subTraining, method="class")
+prediction2 <- predict(model2, subTesting, type = "class")
+confusionMatrix(prediction2, subTesting$classe)
+model2 <- randomForest(classe ~. , data=subTraining, method="class")
+predictfinal <- predict(model2, testingset, type="class")
+predictfinal
+ 
+
+
+```
+
+
+## Including Plots
+
+```{r BarPlot, echo=FALSE}
+plot(subTraining$classe, col="blue", main="Bar Plot of levels of the variable classe within the subTraining data set", xlab="classe levels", ylab="Frequency")
+rpart.plot(model1, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+```
+
+## Conclusion
+As mentioned earlier we will use the model that is more accurate, based on below 
+Method	Accuracy	Out of Sample Error Rate
+
+Decision Tree	0.7394	1-0.7394 = 0.2606 = ~26%
+Random Forest	0.9951	1-0.9951 = 0.0049 = ~0.5%
+
+We will pick Random Forest and apply in out testing data to get below results.
